@@ -2,15 +2,20 @@ SCREEN_SIZE = (800, 600)
 
 from OpenGL.GL import *
 from OpenGL.GLU import *
+import numpy as np
 from numpy import zeros
 import pygame
 from pygame.locals import *
 
 white = (1.0, 1.0, 1.0, 0.5)
-red   = (1.0, 0.1, 0.1, 0.5)
+red   = (0.1, 1.0, 0.1, 0.3)
 
-current_grid = zeros ((40, 40), int)
-next_grid = zeros ((40, 40), int)
+grid_w = 100
+grid_h = 100
+
+current_grid = zeros ((grid_w, grid_h), int)
+next_grid = zeros ((grid_w, grid_h), int)
+
 # Game of life stuff
 def Neighbours (x_, y_):
     total = 0
@@ -51,17 +56,17 @@ def init():
     
 def DrawCube (x, y, z, color=white, r=1):
     glLoadIdentity()
-    glRotated (0, 0, 1, 90)
-    glBegin (GL_POLYGON)
+    #glRotated (0, 0, 1, 90)
+    glBegin (GL_QUADS)
     glColor4f (*color)
     glVertex (x-r, y-r, -z)
     glVertex (x+r, y-r, -z)
     glVertex (x+r, y+r, -z)
     glVertex (x-r, y+r, -z)
-##    glVertex3f (x-r, y-r, -z)
-##    glVertex3f (x+r, y-r, -z)
-##    glVertex3f (x+r, y+r, -z)
-##    glVertex3f (x-r, y+r, -z)
+    #glVertex3f (x-r, y-r, -z)
+    #glVertex3f (x+r, y-r, -z)
+    #glVertex3f (x+r, y+r, -z)
+    #glVertex3f (x-r, y+r, -z)
     glEnd()
 
 
@@ -75,11 +80,14 @@ init()
 clock = pygame.time.Clock()    
 done = False
 
-current_grid [20, 21] = 1
-current_grid [19, 20] = 1
-current_grid [20, 20] = 1
-current_grid [20, 19] = 1
-current_grid [21, 19] = 1
+np.random.seed(np.random.randint(0,100000))
+current_grid = np.where((np.random.randint(6, size=(grid_w, grid_h)))==1, 1, 0)
+
+
+zoomVar = 300
+zoomMin = 1
+zoomDir = -1
+zoomVal = zoomVar
 
 while done==False:
     clock.tick (60)
@@ -88,12 +96,25 @@ while done==False:
             done=True
         if event.type == KEYUP and event.key == K_ESCAPE:
             done=True                
-        
+             
+    if zoomVal > zoomVar+zoomMin:
+        zoomDir = -1
+    if zoomVal < zoomMin:
+        zoomDir = 1
+    
+    zoomVal += zoomDir
+    if zoomDir > 0:
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        red   = (1, 0, 0, 1)
+    else: 
+        red   = (0.1, 1.0, 0.1, 0.3)
     # Clear the screen, and z-buffer
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    for y in range (1, 39):
-        for x in range (1, 39):
+    #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if np.random.randint(0,100) == 0:
+        current_grid = np.where((np.random.randint(6, size=(grid_w, grid_h)))==1, 1, 0)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    for y in range (1, grid_h-1):
+        for x in range (1, grid_w-1):
             N = Neighbours (x, y)
             if current_grid[y,x]:
                 if N < 2:
@@ -105,15 +126,12 @@ while done==False:
             else:
                 if N == 3:
                     next_grid [y,x] = 1
-            if next_grid[y,x]:
-                DrawCube (x-20, y-20, 40, red)
-##            else:
-##                DrawCube (x-20, y-20, 20, r=0.9)
-
-    current_grid = next_grid
-    next_grid = zeros ((40, 40), int)     
+            if current_grid[y,x]:
+                DrawCube (x-(grid_w/2), y-(grid_h/2), zoomVal, red, 0.5)
+ 
     # Show the screen, but first draw!
-    
+    current_grid = next_grid
+    next_grid = zeros ((grid_w, grid_h), int) 
     pygame.display.flip()
 
 
